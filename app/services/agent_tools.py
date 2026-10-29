@@ -185,6 +185,10 @@ def update_patient(db: Session, args: dict, ctx: CallContext) -> dict:
     if not args:
         return {"success": False, "error_type": "validation",
                 "errors": [{"field": None, "message": "No fields to update were provided."}]}
+    if "address_line_1" in args and "address_line_2" not in args:
+        # A new street address without an apartment means the old apartment
+        # no longer applies; don't leave a stale "Apt 4B" on the new address.
+        args["address_line_2"] = None
     try:
         data = PatientUpdate(**args)
     except ValidationError as e:

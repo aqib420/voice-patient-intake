@@ -148,6 +148,14 @@ def test_update_existing(client):
     assert client.get(f"/patients/{saved['patient_id']}").json()["data"]["city"] == "Oakland"
 
 
+def test_update_new_street_clears_old_apartment(client):
+    saved = run(client, "save_patient", {**SPOKEN_PATIENT, "address_line_2": "Apt 4B"}, call_id="call-A")
+    run(client, "update_patient", {"patient_id": saved["patient_id"], "address_line_1": "200 Elm St",
+                                   "city": "Dallas", "state": "TX", "zip_code": "75201"}, call_id="call-B")
+    p = client.get(f"/patients/{saved['patient_id']}").json()["data"]
+    assert (p["address_line_1"], p["address_line_2"]) == ("200 Elm St", None)
+
+
 def test_update_bad_id(client):
     out = run(client, "update_patient", {"patient_id": "nope", "city": "Oakland"})
     assert out["error_type"] == "not_found"
