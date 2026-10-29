@@ -68,6 +68,18 @@ def test_validate_state_name(client):
     assert out["normalized"] == "TX" and out["say_back"] == "Texas (TX)"
 
 
+def test_validate_phone_flags_existing_patient(client):
+    run(client, "save_patient", SPOKEN_PATIENT, call_id="call-A")
+    out = run(client, "validate_field", {"field": "phone_number", "value": "415-555-0123"}, call_id="call-B")
+    assert out["valid"] is True
+    assert out["existing_patients"][0]["first_name"] == "Maria"
+
+
+def test_validate_phone_new_number_has_no_matches(client):
+    out = run(client, "validate_field", {"field": "phone_number", "value": "2125550100"})
+    assert out["valid"] is True and "existing_patients" not in out
+
+
 def test_validate_unknown_field(client):
     assert run(client, "validate_field", {"field": "shoe_size", "value": "9"})["valid"] is False
 

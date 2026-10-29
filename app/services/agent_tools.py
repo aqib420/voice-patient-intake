@@ -130,7 +130,20 @@ def validate_field(db: Session, args: dict, ctx: CallContext) -> dict:
                 "instruction": "Explain the problem briefly and ask for this field again."}
     out = normalised.strftime("%m/%d/%Y") if isinstance(normalised, date) else (
         normalised.value if isinstance(normalised, Sex) else normalised)
-    return {"valid": True, "field": field, "normalized": out, "say_back": _spoken(field, normalised)}
+    result = {"valid": True, "field": field, "normalized": out, "say_back": _spoken(field, normalised)}
+    if field == "phone_number":
+        # Returning-caller check runs here, server-side, so it never depends on
+        # the model remembering to call lookup_patient as a separate step.
+        matches = svc.find_by_phone(db, out)
+        if matches:
+            result["existing_patients"] = [_summary(p) for p in matches[:3]]
+            result["instruction"] = (
+                "This number already has a patient record. Before continuing, tell the caller "
+                "you may already have a record for the first match by name and ask if they want "
+                "to update it instead. Verify by asking them to state their date of birth; never "
+                "read the stored one aloud."
+            )
+    return result
 
 
 def save_patient(db: Session, args: dict, ctx: CallContext) -> dict:

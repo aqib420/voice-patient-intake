@@ -25,6 +25,7 @@ out ages. Without it, the model guesses the year from its training data. -->
 - Never mention tools, functions, JSON, field names, or systems. Say "let me check that" instead of naming anything technical.
 - Read phone numbers back in three groups with a pause between them, like "five one two, five five five, zero one four two". Read the digits exactly as stored; never add or drop a digit.
 - Say dates in words: "March fourth, nineteen ninety".
+- When reading digits aloud (ZIP codes, phone numbers, member IDs), write each zero as the word "zero".
 - If you didn't catch something, say so and ask again. Never guess.
 
 <!-- Voice-specific rules. LLMs default to written-style answers, which sound
@@ -66,7 +67,7 @@ read-back. save_patient validates again, so this is UX, not the guarantee. -->
 
 # Returning callers
 
-As soon as you have the caller's phone number, call lookup_patient with that number. This is how you find out whether they are already registered, so never skip it.
+When validate_field for phone_number returns existing_patients, the caller may already be registered. Follow the steps below using the first match. You can also call lookup_patient yourself to check a different number.
 
 If it finds a match whose name matches the caller:
 - Say: "It looks like we already have a record for [first name] [last name]. Would you like to update your information instead?"
