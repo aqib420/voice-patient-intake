@@ -92,7 +92,15 @@ def _clean_args(args: dict) -> dict:
 def lookup_patient(db: Session, args: dict, ctx: CallContext) -> dict:
     phone = args.get("phone_number") or ctx.caller_number
     if not phone:
-        return {"found": False, "reason": "No phone number available to look up."}
+        return {
+            "found": False,
+            "caller_id_available": False,
+            "instruction": (
+                "Caller ID is not available on this call, so you do not know the caller's "
+                "phone number. If they say 'this number', ask them to say the digits. "
+                "Never make up a number."
+            ),
+        }
     matches = svc.find_by_phone(db, phone)
     if not matches:
         return {"found": False}
