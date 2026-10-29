@@ -50,6 +50,13 @@ def root():
     return RedirectResponse("/docs")
 
 
+@app.get("/ping", tags=["meta"])
+def ping():
+    """Liveness check without touching the DB, for an uptime pinger that keeps
+    the free Render instance awake without waking the database."""
+    return ok({"status": "ok"})
+
+
 @app.get("/health", tags=["meta"])
 def health():
     with engine.connect() as conn:
