@@ -192,3 +192,18 @@ def test_dropped_call_logged_without_patient(client):
 def test_other_events_ignored(client):
     r = client.post("/vapi/events", json={"message": {"type": "status-update"}}, headers=AUTH)
     assert r.status_code == 200
+
+
+
+
+def test_recent_calls_includes_dropped_calls(client):
+    report = {"message": {"type": "end-of-call-report", "endedReason": "customer-ended-call",
+                          "call": {"id": "call-drop-2"}, "artifact": {"transcript": "AI: Hi"}}}
+    client.post("/vapi/events", json=report, headers=AUTH)
+    calls = client.get("/calls").json()["data"]
+    assert calls[0]["call_id"] == "call-drop-2" and calls[0]["patient_id"] is None
+
+
+def test_dashboard_served(client):
+    r = client.get("/dashboard")
+    assert r.status_code == 200 and "Patient Intake Dashboard" in r.text

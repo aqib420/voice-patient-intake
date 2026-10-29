@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Intake Dashboard</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1a1d23; --muted: #667085; --line: #e4e7ec;
+    --accent: #2f6fde; --accent-bg: #eaf1fd; --ok: #1f7a4d; --ok-bg: #e7f5ee; --warn: #9a5b00; --warn-bg: #fdf3e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111318; --card: #1a1d24; --text: #e7e9ee; --muted: #98a0ae; --line: #2a2f39;
+      --accent: #7aa7ff; --accent-bg: #1c2a44; --ok: #6fd3a0; --ok-bg: #16302a; --warn: #f2b85b; --warn-bg: #3a2c14;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 8px; display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; }
+  h1 { font-size: 20px; margin: 0; font-weight: 600; }
+  h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
+  .sub { color: var(--muted); }
+  .links a { color: var(--accent); text-decoration: none; margin-left: 14px; }
+  main { padding: 8px 24px 40px; display: grid; gap: 20px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); padding: 8px 16px 32px; } header { padding: 16px; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 24px; }
+  @media (max-width: 900px) { .stats { padding: 0 16px; } }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 16px; min-width: 140px; }
+  .stat b { display: block; font-size: 22px; font-weight: 600; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+  input[type=search] { flex: 1; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+  button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr.sel { background: var(--accent-bg); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 16px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  summary { cursor: pointer; display: flex; align-items: center; gap: 8px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "\25B8"; color: var(--muted); }
+  details[open] > summary::before { content: "\25BE"; }
+  pre { white-space: pre-wrap; font: 12px/1.5 ui-monospace, Menlo, monospace; margin: 8px 0 0; max-height: 320px; overflow: auto; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .call-row { flex: 1; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Patient Intake Dashboard</h1>
+    <div class="sub">Patients registered by the voice agent and through the API</div>
+  </div>
+  <div class="links"><a href="/docs">API docs</a><a href="/patients">Raw JSON</a></div>
+</header>
+
+<div class="stats">
+  <div class="stat"><b id="st-patients">–</b><span>Active patients</span></div>
+  <div class="stat"><b id="st-calls">–</b><span>Recent calls</span></div>
+  <div class="stat"><b id="st-saved">–</b><span>Calls that saved a patient</span></div>
+</div>
+
+<main>
+  <section class="card">
+    <h2>Patients</h2>
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Filter by name, phone, city…" aria-label="Filter patients">
+      <button id="refresh">Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>DOB</th><th>Phone</th><th>City</th><th>Language</th><th>Registered</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div id="rows-empty" class="empty" hidden>No patients yet.</div>
+  </section>
+
+  <section class="card" id="detail">
+    <h2>Details</h2>
+    <div class="empty">Select a patient to see their record and call transcripts.</div>
+  </section>
+
+  <section class="card" style="grid-column: 1 / -1">
+    <h2>Recent calls</h2>
+    <div id="calls"></div>
+  </section>
+</main>
+
+<script>
+// All values come from callers, so they are inserted with textContent, never innerHTML.
+const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
+const phone = p => p && p.length === 10 ? `(${p.slice(0,3)}) ${p.slice(3,6)}-${p.slice(6)}` : (p || "—");
+const when = t => t ? new Date(t).toLocaleString() : "—";
+let patients = [], calls = [], selected = null;
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  const body = await r.json();
+  if (body.error) throw new Error(body.error.message);
+  return body.data;
+}
+
+function renderRows() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const rows = document.getElementById("rows");
+  rows.replaceChildren();
+  const digits = q.replace(/\D/g, "");
+  const list = patients.filter(p => !q
+    || [p.first_name, p.last_name, p.city, p.state].join(" ").toLowerCase().includes(q)
+    || (digits.length >= 3 && p.phone_number.includes(digits)));
+  for (const p of list) {
+    const tr = el("tr");
+    if (p.patient_id === selected) tr.className = "sel";
+    tr.append(el("td", `${p.first_name} ${p.last_name}`), el("td", p.date_of_birth), el("td", phone(p.phone_number)),
+              el("td", `${p.city}, ${p.state}`), el("td", p.preferred_language), el("td", when(p.created_at)));
+    tr.onclick = () => showPatient(p);
+    rows.append(tr);
+  }
+  document.getElementById("rows-empty").hidden = list.length > 0;
+}
+
+function callBlock(c) {
+  const d = el("details");
+  const s = el("summary");
+  const saved = c.patient_id ? el("span", "Patient saved", "pill ok") : el("span", "No patient saved", "pill warn");
+  const row = el("span", null, "call-row");
+  row.append(el("span", `${when(c.created_at)} · ${c.ended_reason || "in progress"}`), saved);
+  s.append(row);
+  d.append(s);
+  if (c.summary) d.append(el("p", c.summary));
+  d.append(el("pre", c.transcript || "No transcript."));
+  return d;
+}
+
+async function showPatient(p) {
+  selected = p.patient_id;
+  renderRows();
+  const box = document.getElementById("detail");
+  box.replaceChildren(el("h2", `${p.first_name} ${p.last_name}`));
+  const dl = el("dl");
+  const fields = [
+    ["Patient ID", p.patient_id], ["Date of birth", p.date_of_birth], ["Sex", p.sex],
+    ["Phone", phone(p.phone_number)], ["Email", p.email],
+    ["Address", [p.address_line_1, p.address_line_2, `${p.city}, ${p.state} ${p.zip_code}`].filter(Boolean).join(", ")],
+    ["Insurance", [p.insurance_provider, p.insurance_member_id].filter(Boolean).join(" · ")],
+    ["Language", p.preferred_language],
+    ["Emergency contact", p.emergency_contact_name ? `${p.emergency_contact_name} · ${phone(p.emergency_contact_phone)}` : null],
+    ["Created", when(p.created_at)], ["Updated", when(p.updated_at)],
+  ];
+  for (const [k, v] of fields) { dl.append(el("dt", k), el("dd", v || "—")); }
+  box.append(dl, el("h2", "Calls"));
+  try {
+    const list = await getJSON(`/patients/${p.patient_id}/calls`);
+    if (!list.length) box.append(el("div", "No calls linked (registered through the API).", "empty"));
+    list.forEach(c => box.append(callBlock(c)));
+  } catch (e) { box.append(el("div", `Couldn't load calls: ${e.message}`, "empty")); }
+}
+
+function renderCalls() {
+  const box = document.getElementById("calls");
+  box.replaceChildren();
+  if (!calls.length) { box.append(el("div", "No calls yet.", "empty")); return; }
+  const byId = Object.fromEntries(patients.map(p => [p.patient_id, `${p.first_name} ${p.last_name}`]));
+  for (const c of calls) {
+    const b = callBlock(c);
+    if (c.patient_id && byId[c.patient_id]) b.querySelector(".pill").textContent = `Saved: ${byId[c.patient_id]}`;
+    box.append(b);
+  }
+}
+
+async function load() {
+  try {
+    [patients, calls] = await Promise.all([getJSON("/patients?limit=500"), getJSON("/calls?limit=50")]);
+  } catch (e) {
+    document.getElementById("rows-empty").textContent = `Couldn't load data: ${e.message}`;
+    document.getElementById("rows-empty").hidden = false;
+    return;
+  }
+  document.getElementById("st-patients").textContent = patients.length;
+  document.getElementById("st-calls").textContent = calls.length;
+  document.getElementById("st-saved").textContent = calls.filter(c => c.patient_id).length;
+  renderRows();
+  renderCalls();
+  const still = patients.find(p => p.patient_id === selected);
+  if (still) showPatient(still);
+}
+
+document.getElementById("q").addEventListener("input", renderRows);
+document.getElementById("refresh").addEventListener("click", load);
+load();
+</script>
+</body>
+</html>

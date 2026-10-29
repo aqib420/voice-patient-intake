@@ -3,7 +3,9 @@ import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from pathlib import Path
+
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import text
 
 from app.config import get_settings
@@ -45,9 +47,17 @@ app.include_router(calls.router)
 app.include_router(vapi.router)
 
 
+DASHBOARD = Path(__file__).parent / "static" / "dashboard.html"
+
+
 @app.get("/", include_in_schema=False)
 def root():
-    return RedirectResponse("/docs")
+    return RedirectResponse("/dashboard")
+
+
+@app.get("/dashboard", include_in_schema=False)
+def dashboard():
+    return FileResponse(DASHBOARD)
 
 
 @app.get("/ping", tags=["meta"])

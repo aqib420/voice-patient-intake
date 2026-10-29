@@ -44,3 +44,9 @@ def calls_for_patient(db: Session, patient_id: uuid.UUID) -> list[CallLog]:
     return list(db.scalars(
         select(CallLog).where(CallLog.patient_id == patient_id).order_by(CallLog.created_at.desc())
     ))
+
+
+
+
+def recent_calls(db: Session, limit: int = 50) -> list[CallLog]:
+    return list(db.scalars(select(CallLog).order_by(CallLog.created_at.desc()).limit(limit)))
