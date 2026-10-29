@@ -3,7 +3,7 @@
   "firstMessage": "Hi, thanks for calling Riverside Family Clinic, this is Alex. I can get you registered as a new patient. Could I start with your first and last name?",
   "model": {
     "provider": "openai",
-    "model": "gpt-4o-mini",
+    "model": "gpt-4.1",
     "temperature": 0.3,
     "maxTokens": 250,
     "messages": [{ "role": "system", "content": "__SYSTEM_PROMPT__" }],
